@@ -1,7 +1,27 @@
+// autobind decorator
+function autobind(
+    _: any,
+    _2: string,
+    descriptor: PropertyDescriptor
+) {
+    const originalMethod = descriptor.value;
+    const adjDescriptor: PropertyDescriptor = {
+        configurable: true,
+        get() {
+            const boundFn = originalMethod.bind(this);
+            return boundFn;
+        }
+    };
+    return adjDescriptor;
+}
+
 class ProjectInput {
     templateElement: HTMLTemplateElement;
     hostElement: HTMLDivElement;
     element: HTMLFormElement;
+    titleInputElement: HTMLInputElement;
+    descriptionInputElement: HTMLInputElement;
+    peopleInputElement: HTMLInputElement;
 
     constructor() {
         this.templateElement = document.getElementById('project-input')! as HTMLTemplateElement;
@@ -16,8 +36,27 @@ class ProjectInput {
         // 가져온 내용의 첫 번째 자식 요소를 가져와 HTMLFormElement로 캐스팅합니다.
         this.element = importedNode.firstElementChild as HTMLFormElement;
 
+        this.element.id = 'user-input';
+
+        this.titleInputElement = this.element.querySelector('#title') as HTMLInputElement;
+        this.descriptionInputElement = this.element.querySelector('#description') as HTMLInputElement;
+        this.peopleInputElement = this.element.querySelector('#people') as HTMLInputElement;
+
+        this.configure();
+
         this.attach();
     }
+
+    @autobind
+    private submitHandler(event: Event) {
+      event.preventDefault();
+      console.log(this.titleInputElement.value);
+    }
+
+    private configure() {
+        this.element.addEventListener('submit', this.submitHandler.bind(this));
+    }
+
 
     private attach() {
         // 메서드는 요소의 특정 위치에 다른 요소를 삽입하는 DOM 메서드입니다. 
