@@ -1,1 +1,36 @@
-// Code goes here!
+class ProjectInput {
+    templateElement: HTMLTemplateElement;
+    hostElement: HTMLDivElement;
+    element: HTMLFormElement;
+
+    constructor() {
+        this.templateElement = document.getElementById('project-input')! as HTMLTemplateElement;
+
+        this.hostElement = document.getElementById('app')! as HTMLDivElement;
+
+        // document.importNode() 함수는 DOM에서 노드를 가져와 새로운 노드의 복제본을 생성하는 메서드입니다. 
+        // 이 함수를 사용하면 가져온 노드를 현재 문서의 다른 위치에 삽입할 수 있습니다.
+        //document.importNode(node: Node, deep: boolean): Node;
+        const importedNode = document.importNode(this.templateElement.content, true);
+
+        // 가져온 내용의 첫 번째 자식 요소를 가져와 HTMLFormElement로 캐스팅합니다.
+        this.element = importedNode.firstElementChild as HTMLFormElement;
+
+        this.attach();
+    }
+
+    private attach() {
+        // 메서드는 요소의 특정 위치에 다른 요소를 삽입하는 DOM 메서드입니다. 
+        // 이 메서드를 사용하면 특정 요소의 앞이나 뒤, 혹은 자식 요소로 다른 요소를 삽입할 수 있습니다.
+        //element.insertAdjacentElement(position: InsertPosition, insertedElement: Element): Element | null;
+        //position: 요소를 삽입할 위치를 지정하는 문자열입니다. 다음의 네 가지 값 중 하나를 사용할 수 있습니다:
+        // 'beforebegin': 현재 요소의 이전 형제로 요소를 삽입합니다.
+        // 'afterbegin': 현재 요소의 첫 번째 자식으로 요소를 삽입합니다.
+        // 'beforeend': 현재 요소의 마지막 자식으로 요소를 삽입합니다.
+        // 'afterend': 현재 요소의 다음 형제로 요소를 삽입합니다.
+        //insertedElement: 삽입할 요소입니다.
+        this.hostElement.insertAdjacentElement('afterbegin', this.element);
+    }
+}
+
+const prjInput = new ProjectInput();
