@@ -1,17 +1,17 @@
 
-enum ProjectStatus{
+enum ProjectStatus {
     Active,
     Finished
 }
 
-class Project{
+class Project {
     constructor(
         public id: string,
         public title: string,
         public description: string,
         public people: number,
         public status: ProjectStatus
-    ){}
+    ) { }
 }
 
 type Listener = (items: Project[]) => void;
@@ -44,7 +44,7 @@ class ProjectState {
             description,
             numOfPeople,
             ProjectStatus.Active
-          );
+        );
         this.projects.push(newProject);
         for (const listenerFn of this.listeners) {
             listenerFn(this.projects.slice());
@@ -137,7 +137,18 @@ class ProjectList {
         this.element.id = `${this.type}-projects`;
 
         projectState.addListener((projects: Project[]) => {
-            this.assignedProjects = projects;
+
+            const relevantProjects = projects.filter(prj => {
+                if (this.type === "active") {
+                    return prj.status === ProjectStatus.Active;
+                }
+                return prj.status === ProjectStatus.Finished;
+
+            })
+
+            console.log(">>>relevantProjects", relevantProjects)
+
+            this.assignedProjects = relevantProjects;;
             this.renderProjects();
         })
 
@@ -148,6 +159,8 @@ class ProjectList {
 
     private renderProjects() {
         const listEl = document.getElementById(`${this.type}-projects-list`)! as HTMLUListElement;
+        console.log(`>>>`, listEl.innerHTML)
+        listEl.innerHTML = '';//비워내기
         for (const prjItem of this.assignedProjects) {
             const listItem = document.createElement('li');
             listItem.textContent = prjItem.title;
