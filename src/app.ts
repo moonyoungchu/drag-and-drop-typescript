@@ -14,17 +14,31 @@ class Project {
     ) { }
 }
 
-type Listener = (items: Project[]) => void;
+
+type Listener<T> = (items: T[]) => void;
+
+
+class State<T> {
+    protected listeners: Listener<T>[] = [];
+
+    addListener(listenerFn: Listener<T>) {
+        this.listeners.push(listenerFn);
+    }
+}
 
 
 //싱글톤 패턴은 디자인 패턴 중 하나로, 클래스의 인스턴스를 전역에서 하나만 생성하고 사용하는 패턴. 
-class ProjectState {
-    private listeners: Listener[] = [];
+class ProjectState extends State<Project> {
+
     private projects: Project[] = [];
     private static instance: ProjectState;
 
-    private constructor() { }
+    private constructor() {
+        super();
+    }
 
+    //getInstance 메서드는 싱글톤 패턴을 구현하는 메서드로, ProjectState의 유일한 인스턴스를 반환합니다. 
+    //이미 인스턴스가 존재하면 기존 인스턴스를 반환하고, 그렇지 않으면 새로운 인스턴스를 생성하여 반환합니다.
     static getInstance() {
         if (this.instance) {
             return this.instance;
@@ -33,10 +47,7 @@ class ProjectState {
         return this.instance;
     }
 
-    addListener(listenerFn: Listener) {
-        this.listeners.push(listenerFn);
-    }
-
+    //새로운 프로젝트 추가
     addProject(title: string, description: string, numOfPeople: number) {
         const newProject = new Project(
             Math.random().toString(),
@@ -52,8 +63,10 @@ class ProjectState {
     }
 }
 
-
+// ProjectState 클래스의 싱글톤 인스턴스를 얻어옵니다. 
+//getInstance 메서드를 통해 projectState 변수에 유일한 ProjectState 인스턴스가 할당됩니다.
 const projectState = ProjectState.getInstance();
+
 
 interface Validatable {
     value: string | number;
@@ -116,45 +129,60 @@ function autobind(
     return adjDescriptor;
 }
 
-// ProjectList Class
-class ProjectList {
+// Component Base Class
+// abstract 키워드는 추상 클래스를 정의할 때 사용됩니다. 
+//추상 클래스는 직접 인스턴스를 생성할 수 없으며, 다른 클래스에서 상속하여 구체화해야 합니다.
+abstract class Component<T extends HTMLElement, U extends HTMLElement> {
     templateElement: HTMLTemplateElement;
-    hostElement: HTMLDivElement;
-    element: HTMLElement;
+    hostElement: T;
+    element: U;
+
+    constructor(
+        templateId: string,
+        hostElementId: string,
+        insertAtStart: boolean,
+        newElementId?: string
+    ) {
+        this.templateElement = document.getElementById(templateId)! as HTMLTemplateElement;
+        this.hostElement = document.getElementById(hostElementId)! as T;
+
+        // document.importNode() 함수는 DOM에서 노드를 가져와 새로운 노드의 복제본을 생성하는 메서드입니다. 
+        const importedNode = document.importNode(this.templateElement.content, true);
+
+        //가져온 내용의 첫 번째 자식 요소를 가져와 HTMLFormElement로 캐스팅합니다.
+        this.element = importedNode.firstElementChild as U;
+        if (newElementId) {
+            this.element.id = newElementId;
+        }
+
+        this.attach(insertAtStart);
+    }
+
+    private attach(insertAtBeginning: boolean) {
+        this.hostElement.insertAdjacentElement(
+            insertAtBeginning ? 'afterbegin' : 'beforeend',
+            this.element
+        );
+    }
+
+    //추상 메서드가 선언되어 있습니다. 
+    //이 추상 메서드들은 서브 클래스에서 반드시 구현되어야 하는 메서드입니다.
+    abstract configure(): void;
+    abstract renderContent(): void;
+}
+
+
+// ProjectList Class
+class ProjectList extends Component<HTMLDivElement, HTMLElement> {
+
     assignedProjects: Project[];
 
     constructor(private type: 'active' | 'finished') {
-        this.templateElement = document.getElementById('project-list')! as HTMLTemplateElement;
-        this.hostElement = document.getElementById('app')! as HTMLDivElement;
+        super('project-list', 'app', false, `${type}-projects`);
         this.assignedProjects = [];
 
-        const importedNode = document.importNode(
-            this.templateElement.content,
-            true
-        )
-
-        this.element = importedNode.firstElementChild as HTMLElement;
-        this.element.id = `${this.type}-projects`;
-
-        projectState.addListener((projects: Project[]) => {
-
-            const relevantProjects = projects.filter(prj => {
-                if (this.type === "active") {
-                    return prj.status === ProjectStatus.Active;
-                }
-                return prj.status === ProjectStatus.Finished;
-
-            })
-
-            console.log(">>>relevantProjects", relevantProjects)
-
-            this.assignedProjects = relevantProjects;;
-            this.renderProjects();
-        })
-
-        this.attach();
+        this.configure();
         this.renderContent();
-
     }
 
     private renderProjects() {
@@ -168,49 +196,48 @@ class ProjectList {
         }
     }
 
-    private renderContent() {
+    configure() {
+        projectState.addListener((projects: Project[]) => {
+            const relevantProjects = projects.filter(prj => {
+                if (this.type === 'active') {
+                    return prj.status === ProjectStatus.Active;
+                }
+                return prj.status === ProjectStatus.Finished;
+            });
+            this.assignedProjects = relevantProjects;
+            this.renderProjects();
+        });
+    }
+
+    renderContent() {
         const listId = `${this.type}-projects-list`;
         this.element.querySelector('ul')!.id = listId;
         this.element.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS';
     }
-
-    private attach() {
-        this.hostElement.insertAdjacentElement('beforeend', this.element);
-    }
-
-
 }
 
 
 
-class ProjectInput {
-    templateElement: HTMLTemplateElement;
-    hostElement: HTMLDivElement;
-    element: HTMLFormElement;
+class ProjectInput extends Component<HTMLDivElement, HTMLFormElement>{
     titleInputElement: HTMLInputElement;
     descriptionInputElement: HTMLInputElement;
     peopleInputElement: HTMLInputElement;
 
     constructor() {
-        this.templateElement = document.getElementById('project-input')! as HTMLTemplateElement;
-        this.hostElement = document.getElementById('app')! as HTMLDivElement;
-
-        // document.importNode() 함수는 DOM에서 노드를 가져와 새로운 노드의 복제본을 생성하는 메서드입니다. 
-        // 이 함수를 사용하면 가져온 노드를 현재 문서의 다른 위치에 삽입할 수 있습니다.
-        //document.importNode(node: Node, deep: boolean): Node;
-        const importedNode = document.importNode(this.templateElement.content, true);
-
-        // 가져온 내용의 첫 번째 자식 요소를 가져와 HTMLFormElement로 캐스팅합니다.
-        this.element = importedNode.firstElementChild as HTMLFormElement;
-        this.element.id = 'user-input';
+        super('project-input', 'app', true, 'user-input');
 
         this.titleInputElement = this.element.querySelector('#title') as HTMLInputElement;
         this.descriptionInputElement = this.element.querySelector('#description') as HTMLInputElement;
         this.peopleInputElement = this.element.querySelector('#people') as HTMLInputElement;
 
         this.configure();
-        this.attach();
     }
+
+    configure() {
+        this.element.addEventListener('submit', this.submitHandler);
+    }
+
+    renderContent() { }
 
     private gatherUserInput(): [string, string, number] | void {
         const enteredTitle = this.titleInputElement.value;
@@ -251,7 +278,6 @@ class ProjectInput {
         this.peopleInputElement.value = '';
     }
 
-
     @autobind
     private submitHandler(event: Event) {
         event.preventDefault();
@@ -262,23 +288,6 @@ class ProjectInput {
             console.log(title, desc, people);
             this.clearInputs();
         }
-    }
-
-    private configure() {
-        this.element.addEventListener('submit', this.submitHandler.bind(this));
-    }
-
-    private attach() {
-        // 메서드는 요소의 특정 위치에 다른 요소를 삽입하는 DOM 메서드입니다. 
-        // 이 메서드를 사용하면 특정 요소의 앞이나 뒤, 혹은 자식 요소로 다른 요소를 삽입할 수 있습니다.
-        //element.insertAdjacentElement(position: InsertPosition, insertedElement: Element): Element | null;
-        //position: 요소를 삽입할 위치를 지정하는 문자열입니다. 다음의 네 가지 값 중 하나를 사용할 수 있습니다:
-        // 'beforebegin': 현재 요소의 이전 형제로 요소를 삽입합니다.
-        // 'afterbegin': 현재 요소의 첫 번째 자식으로 요소를 삽입합니다.
-        // 'beforeend': 현재 요소의 마지막 자식으로 요소를 삽입합니다.
-        // 'afterend': 현재 요소의 다음 형제로 요소를 삽입합니다.
-        //insertedElement: 삽입할 요소입니다.
-        this.hostElement.insertAdjacentElement('afterbegin', this.element);
     }
 }
 
