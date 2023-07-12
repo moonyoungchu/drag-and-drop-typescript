@@ -181,3 +181,53 @@ type Listener<T> = (items: T[]) => void;
 제네릭 타입 `T`는 실제 사용자가 타입을 정의할 때 구체적인 타입으로 대체되며, 이를 통해 타입 안정성과 재사용성을 보장할 수 있습니다. `T`와 `U`는 일반적으로 제네릭 타입 변수로 사용되는 식별자입니다.
 
 제네릭을 사용하기 시작하면, 제네릭 함수를 만들 때, 컴파일러가 함수 본문에 제네릭 타입화된 매개변수를 쓰도록 강요합니다. 즉, 이 매개변수들은 실제로 `any` 나 모든 타입이 될 수 있는 것처럼 취급할 수 있게 됩니다.
+
+</br>
+
+### Getter
+
+- 클래스의 멤버로서, 해당 멤버에 접근할 때 특정 동작을 수행하는 함수입니다.
+- 멤버 변수의 값을 반환하거나, 멤버 변수를 가공하여 반환하는 등의 역할을 할 수 있습니다.
+- 메서드 형태로 정의되며, 속성 접근자(property accessor)로 사용됩니다.
+    - 인스턴스를 생성하고 Getter에 접근할 때는 함수 형태로 호출하는 것이 아니라 속성에 접근하는 것처럼 사용합니다. Getter는 멤버 변수에 직접 접근하지 않고 Getter 메서드를 호출하여 값을 얻습니다.
+
+```tsx
+get propertyName(): propertyType {
+  // getter의 동작을 구현
+  return propertyValue;
+}
+
+//propertyName: 접근하고자 하는 속성의 이름
+//propertyType: 속성의 타입
+//propertyValue: Getter가 반환하는 값
+```
+
+```tsx
+class Product {
+  private _price: number;
+  private _discountRate: number;
+
+  constructor(price: number, discountRate: number) {
+    this._price = price;
+    this._discountRate = discountRate;
+  }
+
+  get price(): number {
+    return this._price;
+  }
+
+  get discountRate(): number {
+    return this._discountRate;
+  }
+
+  get discountedPrice(): number {
+    const discountAmount = this._price * (this._discountRate / 100);
+    return this._price - discountAmount;
+  }
+}
+
+const myProduct = new Product(1000, 20);
+console.log(myProduct.price); // 1000
+console.log(myProduct.discountRate); // 20
+console.log(myProduct.discountedPrice); // 800
+```
